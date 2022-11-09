@@ -8,7 +8,7 @@ use dioxus::fermi::UseAtomRef;
 use dioxus::prelude::*;
 use uuid::Uuid;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 struct ToastManagerItem {
     info: ToastInfo,
     hide_after: Option<i64>,
@@ -58,7 +58,7 @@ pub enum Icon {
     Info,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub struct ToastInfo {
     pub heading: Option<String>,
     pub context: String,
@@ -214,23 +214,14 @@ pub fn ToastFrame<'a>(cx: Scope<'a, ToastFrameProps<'a>>) -> Element {
 
     use_future(&cx, (), |_| {
         let toast_manager = manager.clone();
-
         async move {
             loop {
-                // ensure the reference to toast_manager is dropped before the await
-                {
-                    let now = chrono::Local::now().timestamp();
-                    let list = &toast_manager.read().list;
-                    let updated_list: BTreeMap<Uuid, ToastManagerItem> = list
-                        .iter()
-                        .filter(|(_id, item)| match item.hide_after {
-                            None => true,
-                            Some(hide_after) => now < hide_after,
-                        })
-                        .map(|item| (*item.0, (*item.1).clone()))
-                        .collect();
-                    if toast_manager.read().list != updated_list {
-                        toast_manager.write().list = updated_list;
+                let timer_list = toast_manager.read().list.clone();
+                for (id, item) in &timer_list {
+                    if let Some(hide_after) = item.hide_after {
+                        if chrono::Local::now().timestamp() >= hide_after {
+                            toast_manager.write().list.remove(id);
+                        }
                     }
                 }
                 time_sleep(100).await;
