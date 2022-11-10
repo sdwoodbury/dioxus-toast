@@ -224,7 +224,7 @@ pub fn ToastFrame<'a>(cx: Scope<'a, ToastFrameProps<'a>>) -> Element {
                         }
                     }
                 }
-                time_sleep(100).await;
+                time_sleep(1000).await;
             }
         }
     });
